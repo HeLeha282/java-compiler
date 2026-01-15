@@ -1,128 +1,204 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
 import { Terminal } from './components/Terminal';
-import { PlayIcon, TerminalIcon } from './components/Icons';
-import { Status, FileData } from './types';
-import { analyzeImageWithPrompt } from './services/geminiService';
+import { PlayIcon, BugIcon, StopIcon, ShareIcon, SaveIcon } from './components/Icons';
+import { Status } from './types';
+import { analyzeCode } from './services/geminiService';
+
+const DEFAULT_CODE = `/******************************************************************************
+
+Welcome to GDB Online.
+GDB online is an online compiler and debugger tool for C, C++, Python, Java, PHP, Ruby, Perl,
+C#, OCaml, VB, Swift, Pascal, Fortran, Haskell, Objective-C, Assembly, HTML, CSS, JS, SQLite, Prolog.
+Code, Compile, Run and Debug online from anywhere in world.
+
+*******************************************************************************/
+public class Main
+{
+	public static void main(String[] args) {
+		System.out.println("Hello World");
+	}
+}
+`;
 
 const App: React.FC = () => {
-  const [code, setCode] = useState<string>('');
-  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [status, setStatus] = useState<Status>(Status.IDLE);
   const [output, setOutput] = useState<string>('');
   
+  // Debug Overlay State
+  const [showDebugInput, setShowDebugInput] = useState(false);
+  const [debugPrompt, setDebugPrompt] = useState("");
+  const debugInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when debug opens
+  useEffect(() => {
+    if (showDebugInput && debugInputRef.current) {
+        debugInputRef.current.focus();
+    }
+  }, [showDebugInput]);
+
   const handleRun = async () => {
-    if (!selectedFile) {
-        setOutput("ОШИБКА: Нет входного файла. Пожалуйста, загрузите скриншот в панели 'Проводник'.");
-        setStatus(Status.ERROR);
-        return;
-    }
-
-    if (!code.trim()) {
-        setOutput("ПРЕДУПРЕЖДЕНИЕ: Текстовый запрос пуст. Нейросеть попытается описать изображение.");
-    }
-
     setStatus(Status.LOADING);
-    setOutput(''); // Clear previous output
+    setOutput('');
+    setShowDebugInput(false);
 
     try {
-      const result = await analyzeImageWithPrompt(
-          code.trim() || "Проанализируй это изображение.", 
-          selectedFile.base64, 
-          selectedFile.mimeType
-      );
+      // Simulate Running
+      const result = await analyzeCode(code, 'run');
       setOutput(result);
       setStatus(Status.SUCCESS);
     } catch (error: any) {
-      setOutput(`ОШИБКА ВРЕМЕНИ ВЫПОЛНЕНИЯ: ${error.message}`);
+      setOutput(`Error: ${error.message}`);
       setStatus(Status.ERROR);
     }
   };
 
+  const handleDebugClick = () => {
+    setShowDebugInput(!showDebugInput);
+  };
+
+  const handleDebugSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!debugPrompt.trim()) return;
+
+    setStatus(Status.LOADING);
+    setOutput('Debugger attached. Analyzing...');
+    setShowDebugInput(false); // Hide after submitting
+
+    try {
+        const result = await analyzeCode(code, 'debug', debugPrompt);
+        setOutput(result);
+        setStatus(Status.SUCCESS);
+        setDebugPrompt("");
+    } catch (error: any) {
+        setOutput(`Debug Error: ${error.message}`);
+        setStatus(Status.ERROR);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-[#0f172a] text-white overflow-hidden">
-      {/* Top Bar (VS Code style) */}
-      <div className="h-10 bg-[#1e293b] flex items-center justify-between px-4 border-b border-[#334155] select-none z-10">
+    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden font-sans">
+      {/* Navbar / Header */}
+      <div className="h-14 bg-[#333] text-white flex items-center justify-between px-4 shadow-md z-20">
         <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="ml-4 text-sm text-gray-400 font-medium">NeuroCompiler IDE - Workspace</span>
+            <div className="bg-orange-500 text-white font-bold p-1 rounded text-xs">GDB</div>
+            <span className="font-semibold text-lg tracking-tight">Online Java Compiler</span>
         </div>
-        
-        <div className="flex items-center bg-[#0f172a] rounded-md border border-[#334155]">
+
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-1">
            <button 
              onClick={handleRun}
              disabled={status === Status.LOADING}
-             className={`flex items-center px-3 py-1 text-sm font-medium transition-colors ${
-                 status === Status.LOADING 
-                 ? 'text-gray-500 cursor-not-allowed' 
-                 : 'text-green-400 hover:text-green-300 hover:bg-[#1e293b]'
-             }`}
+             className="flex items-center px-4 py-1.5 bg-[#4caf50] hover:bg-[#43a047] text-white rounded text-sm font-medium transition-colors mx-1"
            >
-             <span className="mr-2"><PlayIcon /></span>
-             {status === Status.LOADING ? 'Компиляция...' : 'Запустить'}
+             <span className="mr-1.5"><PlayIcon /></span> Run
            </button>
+
+           <div className="relative">
+                <button 
+                    onClick={handleDebugClick}
+                    disabled={status === Status.LOADING}
+                    className="flex items-center px-4 py-1.5 bg-[#f44336] hover:bg-[#e53935] text-white rounded text-sm font-medium transition-colors mx-1"
+                >
+                    <span className="mr-1.5"><BugIcon /></span> Debug
+                </button>
+                
+                {/* Sneaky Debug Input Popover */}
+                {showDebugInput && (
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white shadow-xl rounded border border-gray-300 p-2 z-50">
+                        <form onSubmit={handleDebugSubmit}>
+                            <input
+                                ref={debugInputRef}
+                                type="text"
+                                className="w-full text-black text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-orange-500"
+                                placeholder="Enter debug query..."
+                                value={debugPrompt}
+                                onChange={(e) => setDebugPrompt(e.target.value)}
+                            />
+                            <div className="text-[10px] text-gray-500 mt-1 text-right">Press Enter to ask AI</div>
+                        </form>
+                    </div>
+                )}
+           </div>
+
+           <button className="flex items-center px-4 py-1.5 bg-[#ff9800] hover:bg-[#fb8c00] text-white rounded text-sm font-medium transition-colors mx-1">
+             <span className="mr-1.5"><StopIcon /></span> Stop
+           </button>
+           
+           <button className="flex items-center px-3 py-1.5 bg-transparent hover:bg-gray-700 text-gray-300 rounded text-sm transition-colors mx-1 border border-gray-600">
+             <span className="mr-1.5"><ShareIcon /></span> Share
+           </button>
+           
+           <button className="flex items-center px-3 py-1.5 bg-transparent hover:bg-gray-700 text-gray-300 rounded text-sm transition-colors mx-1 border border-gray-600">
+             <span className="mr-1.5"><SaveIcon /></span> Save
+           </button>
+        </div>
+
+        <div className="flex items-center">
+            <span className="text-gray-400 text-xs mr-2">Language:</span>
+            <select className="bg-[#444] text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none">
+                <option>Java (OpenJDK 17.0.1)</option>
+            </select>
         </div>
       </div>
 
       {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <Sidebar selectedFile={selectedFile} onFileSelect={setSelectedFile} />
+        <Sidebar />
 
         {/* Editor Area */}
         <div className="flex flex-col flex-1 min-w-0">
           
-          {/* Editor Tabs */}
-          <div className="flex bg-[#1e293b] border-b border-[#334155]">
-             <div className="px-4 py-2 bg-[#0f172a] border-t-2 border-blue-500 text-sm text-gray-200 flex items-center border-r border-[#334155]">
-                <span className="mr-2 text-yellow-400">JS</span>
-                prompt.txt
+          {/* Main Editor Tabs */}
+          <div className="flex bg-[#e0e0e0] border-b border-gray-300">
+             <div className="px-4 py-1.5 bg-white border-t-2 border-orange-500 text-sm font-medium text-gray-700 flex items-center border-r border-gray-300">
+                Main.java
              </div>
-             {selectedFile && (
-                 <div className="px-4 py-2 bg-[#1e293b] text-sm text-gray-400 flex items-center border-r border-[#334155] cursor-default opacity-70">
-                    <span className="mr-2 text-blue-400">IMG</span>
-                    {selectedFile.name}
-                 </div>
-             )}
+             <button 
+                className="px-3 py-1.5 text-lg font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-300"
+                title="New File"
+             >
+                +
+             </button>
           </div>
 
           {/* Split View: Editor (Top) & Terminal (Bottom) */}
           <div className="flex-1 flex flex-col h-full relative">
             
             {/* Top Half: Code Editor */}
-            <div className="flex-1 h-1/2 min-h-[200px]">
+            <div className="flex-1 h-3/5 min-h-[200px] border-b border-gray-400">
                 <Editor value={code} onChange={setCode} />
             </div>
 
-            {/* Resizer Handle Visual (Non-functional for simplicity) */}
-            <div className="h-1 bg-[#334155] cursor-row-resize hover:bg-blue-500 transition-colors"></div>
-
             {/* Bottom Half: Terminal */}
-            <div className="h-1/2 min-h-[200px] bg-[#020617]">
+            <div className="h-2/5 min-h-[150px] bg-black">
               <Terminal output={output} status={status} />
             </div>
           </div>
 
         </div>
+        
+        {/* Right Ad Space Placeholder (for authenticity) */}
+        <div className="hidden lg:block w-40 bg-[#f0f0f0] border-l border-gray-300 p-4 text-center">
+            <div className="w-full h-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
+                Ads by Google
+            </div>
+        </div>
       </div>
       
-      {/* Status Bar */}
-      <div className="h-6 bg-[#1e293b] border-t border-[#334155] flex items-center justify-between px-3 text-xs text-white select-none">
-        <div className="flex items-center space-x-3">
-            <div className="flex items-center text-blue-400 font-bold hover:bg-[#334155] px-1 rounded cursor-pointer">
-                <span className="mr-1"><TerminalIcon /></span> master*
-            </div>
-            <div className="hover:bg-[#334155] px-1 rounded cursor-pointer">0 errors, 0 warnings</div>
-        </div>
-        <div className="flex items-center space-x-4">
-             <div className="hover:bg-[#334155] px-1 rounded cursor-pointer">Ln {code.split('\n').length}, Col 1</div>
-             <div className="hover:bg-[#334155] px-1 rounded cursor-pointer">UTF-8</div>
-             <div className="hover:bg-[#334155] px-1 rounded cursor-pointer">Gemini-2.5-Flash</div>
-             <div className="hover:bg-[#334155] px-1 rounded cursor-pointer text-blue-300">Prettier</div>
-        </div>
+      {/* Footer */}
+      <div className="bg-[#e0e0e0] border-t border-gray-300 py-1 px-4 text-[11px] text-gray-600 flex justify-between">
+          <div>© 2016 - 2025 GDB Online</div>
+          <div>
+              <span className="mr-4 hover:underline cursor-pointer">About</span>
+              <span className="mr-4 hover:underline cursor-pointer">FAQ</span>
+              <span className="mr-4 hover:underline cursor-pointer">Tutorials</span>
+              <span className="hover:underline cursor-pointer">Contact</span>
+          </div>
       </div>
     </div>
   );

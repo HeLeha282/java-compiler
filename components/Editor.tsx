@@ -23,15 +23,15 @@ export const Editor: React.FC<EditorProps> = ({ value, onChange }) => {
   }, [value]);
 
   return (
-    <div className="relative flex flex-1 h-full bg-[#0f172a] font-mono text-sm overflow-hidden">
+    <div className="relative flex flex-1 h-full bg-[#fffffe] font-mono text-sm overflow-hidden text-black">
       {/* Line Numbers */}
       <div 
         id="line-numbers"
-        className="w-12 pt-4 bg-[#0f172a] text-right text-gray-600 border-r border-[#334155] select-none overflow-hidden"
+        className="w-10 pt-4 bg-[#f0f0f0] text-right text-gray-400 border-r border-gray-300 select-none overflow-hidden"
         style={{ lineHeight: '1.5rem', fontFamily: 'Fira Code, monospace' }}
       >
         {Array.from({ length: lineCount }).map((_, i) => (
-          <div key={i} className="pr-3">{i + 1}</div>
+          <div key={i} className="pr-2">{i + 1}</div>
         ))}
       </div>
 
@@ -41,15 +41,13 @@ export const Editor: React.FC<EditorProps> = ({ value, onChange }) => {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onScroll={handleScroll}
-        className="flex-1 bg-[#0f172a] text-gray-300 p-0 pt-4 pl-4 border-none outline-none resize-none whitespace-pre"
+        className="flex-1 bg-white text-[#2b2b2b] p-0 pt-4 pl-4 border-none outline-none resize-none whitespace-pre selection:bg-blue-100"
         spellCheck={false}
         style={{ 
             lineHeight: '1.5rem', 
             fontFamily: 'Fira Code, monospace',
-            tabSize: 2 
+            tabSize: 4 
         }}
-        placeholder="// Напишите ваш вопрос или код здесь...
-// Скриншот из 'Проводника' будет проанализирован вместе с этим текстом."
       />
     </div>
   );
