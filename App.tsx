@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
 import { Terminal } from './components/Terminal';
@@ -8,19 +8,19 @@ import { analyzeCode } from './services/geminiService';
 
 const DEFAULT_CODE = `/******************************************************************************
 
-Welcome to GDB Online.
+Welcome to Java Compiler 282 (Online Edition).
 GDB online is an online compiler and debugger tool for C, C++, Python, Java, PHP, Ruby, Perl,
 C#, OCaml, VB, Swift, Pascal, Fortran, Haskell, Objective-C, Assembly, HTML, CSS, JS, SQLite, Prolog.
 Code, Compile, Run and Debug online from anywhere in world.
 
 *******************************************************************************/
 
-// 
+// Объясни, что делает этот код и как его можно оптимизировать?
 
 public class Main
 {
 	public static void main(String[] args) {
-		System.out.println("Hello World");
+		System.out.println("Hello World from Java 282");
 	}
 }
 `;
@@ -29,6 +29,11 @@ const App: React.FC = () => {
   const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [status, setStatus] = useState<Status>(Status.IDLE);
   const [output, setOutput] = useState<string>('');
+  
+  // Resizable pane state
+  const [editorHeightPercent, setEditorHeightPercent] = useState(60);
+  const [isDragging, setIsDragging] = useState(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
   
   const handleRun = async () => {
     setStatus(Status.LOADING);
@@ -61,7 +66,7 @@ const App: React.FC = () => {
 
     const query = commentLine.trim().replace(/^\/\/\s*/, ''); // Remove // and leading space
 
-    setOutput(`> Debugger attached.\n> Instruction: "${query}"\n> Analyzing...`);
+    setOutput(`> Debugger attached (v282).\n> Instruction: "${query}"\n> Analyzing...`);
 
     try {
         const result = await analyzeCode(code, 'debug', query);
@@ -73,13 +78,56 @@ const App: React.FC = () => {
     }
   };
 
+  // Dragging logic
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isDragging && splitContainerRef.current) {
+        const containerRect = splitContainerRef.current.getBoundingClientRect();
+        const newHeightPixels = e.clientY - containerRect.top;
+        const newHeightPercent = (newHeightPixels / containerRect.height) * 100;
+
+        // Constraints: Min 10%, Max 90%
+        if (newHeightPercent >= 10 && newHeightPercent <= 90) {
+            setEditorHeightPercent(newHeightPercent);
+        }
+    }
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (isDragging) {
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResizing);
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+    } else {
+        window.removeEventListener('mousemove', resize);
+        window.removeEventListener('mouseup', stopResizing);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }
+    return () => {
+        window.removeEventListener('mousemove', resize);
+        window.removeEventListener('mouseup', stopResizing);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    };
+  }, [isDragging, resize, stopResizing]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden font-sans">
       {/* Navbar / Header */}
-      <div className="h-14 bg-[#333] text-white flex items-center justify-between px-4 shadow-md z-20">
+      <div className="h-14 bg-[#333] text-white flex items-center justify-between px-4 shadow-md z-20 flex-none">
         <div className="flex items-center space-x-2">
             <div className="bg-orange-500 text-white font-bold p-1 rounded text-xs">GDB</div>
-            <span className="font-semibold text-lg tracking-tight">Online Java Compiler</span>
+            <h1 className="font-semibold text-lg tracking-tight">Online Java Compiler 282</h1>
         </div>
 
         {/* Action Buttons */}
@@ -117,7 +165,7 @@ const App: React.FC = () => {
         <div className="flex items-center">
             <span className="text-gray-400 text-xs mr-2">Language:</span>
             <select className="bg-[#444] text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none">
-                <option>Java (OpenJDK 17.0.1)</option>
+                <option>Java 282 (OpenJDK 17.0.1)</option>
             </select>
         </div>
       </div>
@@ -131,7 +179,7 @@ const App: React.FC = () => {
         <div className="flex flex-col flex-1 min-w-0">
           
           {/* Main Editor Tabs */}
-          <div className="flex bg-[#e0e0e0] border-b border-gray-300">
+          <div className="flex bg-[#e0e0e0] border-b border-gray-300 flex-none">
              <div className="px-4 py-1.5 bg-white border-t-2 border-orange-500 text-sm font-medium text-gray-700 flex items-center border-r border-gray-300">
                 Main.java
              </div>
@@ -144,15 +192,24 @@ const App: React.FC = () => {
           </div>
 
           {/* Split View: Editor (Top) & Terminal (Bottom) */}
-          <div className="flex-1 flex flex-col h-full relative">
+          <div ref={splitContainerRef} className="flex-1 flex flex-col h-full relative overflow-hidden">
             
             {/* Top Half: Code Editor */}
-            <div className="flex-1 h-3/5 min-h-[200px] border-b border-gray-400">
+            <div style={{ height: `${editorHeightPercent}%` }} className="min-h-[10%] max-h-[90%] relative">
                 <Editor value={code} onChange={setCode} />
             </div>
 
+            {/* Resizer Handle */}
+            <div 
+                onMouseDown={startResizing}
+                className="h-1.5 bg-[#e0e0e0] hover:bg-orange-400 cursor-row-resize flex-none z-10 border-t border-b border-gray-300 flex justify-center items-center group transition-colors"
+                title="Drag to resize console"
+            >
+                 <div className="w-8 h-0.5 bg-gray-400 rounded-full group-hover:bg-white/80 transition-colors"></div>
+            </div>
+
             {/* Bottom Half: Terminal */}
-            <div className="h-2/5 min-h-[150px] bg-black">
+            <div className="flex-1 min-h-[10%] bg-black overflow-hidden">
               <Terminal output={output} status={status} />
             </div>
           </div>
@@ -160,7 +217,7 @@ const App: React.FC = () => {
         </div>
         
         {/* Right Ad Space Placeholder (for authenticity) */}
-        <div className="hidden lg:block w-40 bg-[#f0f0f0] border-l border-gray-300 p-4 text-center">
+        <div className="hidden lg:block w-40 bg-[#f0f0f0] border-l border-gray-300 p-4 text-center flex-none">
             <div className="w-full h-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">
                 Ads by Google
             </div>
@@ -168,7 +225,7 @@ const App: React.FC = () => {
       </div>
       
       {/* Footer */}
-      <div className="bg-[#e0e0e0] border-t border-gray-300 py-1 px-4 text-[11px] text-gray-600 flex justify-between">
+      <div className="bg-[#e0e0e0] border-t border-gray-300 py-1 px-4 text-[11px] text-gray-600 flex justify-between flex-none">
           <div>© 2016 - 2025 GDB Online</div>
           <div>
               <span className="mr-4 hover:underline cursor-pointer">About</span>
