@@ -1,0 +1,5 @@
+{
+  "name": "Copy of NeuroCompiler IDE",
+  "description": "Интерфейс в стиле IDE для анализа скриншотов и кода с помощью нейросети Gemini.",
+  "requestFramePermissions": []
+}
