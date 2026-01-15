@@ -38,7 +38,7 @@ export const Terminal: React.FC<TerminalProps> = ({ output, status }) => {
 
         {status === Status.LOADING && (
           <div className="text-yellow-400 animate-pulse">
-            > Анализ скриншота и компиляция ответа...
+            &gt; Анализ скриншота и компиляция ответа...
           </div>
         )}
         
@@ -71,7 +71,7 @@ export const Terminal: React.FC<TerminalProps> = ({ output, status }) => {
         
         {status === Status.SUCCESS && (
              <div className="text-green-500 mt-4">
-                > Готово в {(Math.random() * 2 + 0.5).toFixed(2)}s.
+                &gt; Готово в {(Math.random() * 2 + 0.5).toFixed(2)}s.
              </div>
         )}
 
