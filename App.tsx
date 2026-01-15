@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
 import { Terminal } from './components/Terminal';
@@ -14,6 +14,9 @@ C#, OCaml, VB, Swift, Pascal, Fortran, Haskell, Objective-C, Assembly, HTML, CSS
 Code, Compile, Run and Debug online from anywhere in world.
 
 *******************************************************************************/
+
+// Объясни, что делает этот код и как его можно оптимизировать?
+
 public class Main
 {
 	public static void main(String[] args) {
@@ -27,22 +30,9 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.IDLE);
   const [output, setOutput] = useState<string>('');
   
-  // Debug Overlay State
-  const [showDebugInput, setShowDebugInput] = useState(false);
-  const [debugPrompt, setDebugPrompt] = useState("");
-  const debugInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus input when debug opens
-  useEffect(() => {
-    if (showDebugInput && debugInputRef.current) {
-        debugInputRef.current.focus();
-    }
-  }, [showDebugInput]);
-
   const handleRun = async () => {
     setStatus(Status.LOADING);
     setOutput('');
-    setShowDebugInput(false);
 
     try {
       // Simulate Running
@@ -55,23 +45,28 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDebugClick = () => {
-    setShowDebugInput(!showDebugInput);
-  };
-
-  const handleDebugSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!debugPrompt.trim()) return;
-
+  const handleDebugClick = async () => {
     setStatus(Status.LOADING);
-    setOutput('Debugger attached. Analyzing...');
-    setShowDebugInput(false); // Hide after submitting
+    setOutput('Scanning code for debug instructions (lines starting with //)...');
+
+    // Find the first line that looks like a single-line comment
+    const lines = code.split('\n');
+    const commentLine = lines.find(line => line.trim().startsWith('//'));
+
+    if (!commentLine) {
+        setStatus(Status.ERROR);
+        setOutput('Debug Error: No debug instruction found.\n\nPlease add a comment line starting with "//" inside your code to tell the debugger what to do.\nExample: // Find the syntax error');
+        return;
+    }
+
+    const query = commentLine.trim().replace(/^\/\/\s*/, ''); // Remove // and leading space
+
+    setOutput(`> Debugger attached.\n> Instruction: "${query}"\n> Analyzing...`);
 
     try {
-        const result = await analyzeCode(code, 'debug', debugPrompt);
+        const result = await analyzeCode(code, 'debug', query);
         setOutput(result);
         setStatus(Status.SUCCESS);
-        setDebugPrompt("");
     } catch (error: any) {
         setOutput(`Debug Error: ${error.message}`);
         setStatus(Status.ERROR);
@@ -97,33 +92,15 @@ const App: React.FC = () => {
              <span className="mr-1.5"><PlayIcon /></span> Run
            </button>
 
-           <div className="relative">
-                <button 
-                    onClick={handleDebugClick}
-                    disabled={status === Status.LOADING}
-                    className="flex items-center px-4 py-1.5 bg-[#f44336] hover:bg-[#e53935] text-white rounded text-sm font-medium transition-colors mx-1"
-                >
-                    <span className="mr-1.5"><BugIcon /></span> Debug
-                </button>
+           <button 
+                onClick={handleDebugClick}
+                disabled={status === Status.LOADING}
+                className="flex items-center px-4 py-1.5 bg-[#f44336] hover:bg-[#e53935] text-white rounded text-sm font-medium transition-colors mx-1"
+                title="Executes debug instruction found in // comments"
+            >
+                <span className="mr-1.5"><BugIcon /></span> Debug
+            </button>
                 
-                {/* Sneaky Debug Input Popover */}
-                {showDebugInput && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white shadow-xl rounded border border-gray-300 p-2 z-50">
-                        <form onSubmit={handleDebugSubmit}>
-                            <input
-                                ref={debugInputRef}
-                                type="text"
-                                className="w-full text-black text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-orange-500"
-                                placeholder="Enter debug query..."
-                                value={debugPrompt}
-                                onChange={(e) => setDebugPrompt(e.target.value)}
-                            />
-                            <div className="text-[10px] text-gray-500 mt-1 text-right">Press Enter to ask AI</div>
-                        </form>
-                    </div>
-                )}
-           </div>
-
            <button className="flex items-center px-4 py-1.5 bg-[#ff9800] hover:bg-[#fb8c00] text-white rounded text-sm font-medium transition-colors mx-1">
              <span className="mr-1.5"><StopIcon /></span> Stop
            </button>
