@@ -1,20 +1,11 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NeuroCompiler IDE
 
-# Run and deploy your AI Studio app
+Это веб-приложение для анализа кода и скриншотов с использованием Google Gemini API.
 
-This contains everything you need to run your app locally.
+## Как это работает
+1. Загрузите скриншот кода или интерфейса.
+2. (Опционально) Добавьте текстовый комментарий или вопрос.
+3. Нажмите "Запустить".
 
-View your app in AI Studio: https://ai.studio/apps/drive/1FpqqOB51F64ZogheZ5UbIt1sDO984M0U
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Статус деплоя
+После загрузки кода на GitHub, перейдите во вкладку **Actions**, чтобы увидеть статус сборки.
